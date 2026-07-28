@@ -38,10 +38,16 @@ def create_app():
     def serve_frontend(path):
         if path.startswith('api/'):
             return jsonify({'error': 'API endpoint not found'}), 404
-        
         target = os.path.join(dist_folder, path)
         if path != "" and os.path.isfile(target):
             return send_from_directory(dist_folder, path)
+        return send_from_directory(dist_folder, 'index.html')
+
+    @app.errorhandler(404)
+    def handle_404(e):
+        from flask import request
+        if request.path.startswith('/api/'):
+            return jsonify({'error': 'API endpoint not found'}), 404
         return send_from_directory(dist_folder, 'index.html')
 
     # Auto-create tables & default admin user
