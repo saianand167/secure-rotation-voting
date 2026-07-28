@@ -36,9 +36,13 @@ def create_app():
     @app.route('/', defaults={'path': ''})
     @app.route('/<path:path>')
     def serve_frontend(path):
-        if path != "" and os.path.exists(os.path.join(app.static_folder, path)):
-            return send_from_directory(app.static_folder, path)
-        return send_from_directory(app.static_folder, 'index.html')
+        if path.startswith('api/'):
+            return jsonify({'error': 'API endpoint not found'}), 404
+        
+        target = os.path.join(dist_folder, path)
+        if path != "" and os.path.isfile(target):
+            return send_from_directory(dist_folder, path)
+        return send_from_directory(dist_folder, 'index.html')
 
     # Auto-create tables & default admin user
     with app.app_context():
