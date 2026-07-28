@@ -12,7 +12,9 @@ class Config:
     # SQLite default, or MySQL/PostgreSQL if set in env
     _db_url = os.getenv('DATABASE_URL', f'sqlite:///{os.path.join(BASE_DIR, "rotation_voting.db")}')
     if _db_url.startswith("postgres://"):
-        _db_url = _db_url.replace("postgres://", "postgresql://", 1)
+        _db_url = _db_url.replace("postgres://", "postgresql+pg8000://", 1)
+    elif _db_url.startswith("postgresql://") and not _db_url.startswith("postgresql+"):
+        _db_url = _db_url.replace("postgresql://", "postgresql+pg8000://", 1)
     
     SQLALCHEMY_DATABASE_URI = _db_url
     SQLALCHEMY_TRACK_MODIFICATIONS = False
