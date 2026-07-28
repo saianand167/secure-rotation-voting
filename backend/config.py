@@ -23,18 +23,24 @@ class Config:
     MAIL_SERVER = 'smtp.gmail.com'
     MAIL_PORT = 587
     MAIL_USE_TLS = True
-    MAIL_USERNAME = os.getenv('GMAIL_USER', '')
-    MAIL_PASSWORD = os.getenv('GMAIL_APP_PASSWORD', '')
+    MAIL_USERNAME = os.getenv('GMAIL_USER', 'n220906@rguktn.ac.in')
+    MAIL_PASSWORD = os.getenv('GMAIL_APP_PASSWORD', 'gkjttyxjpwnwglkk')
     
     @classmethod
     def get_frontend_url(cls):
-        # First check if public_url.txt exists and has a valid URL
+        env_url = os.getenv('FRONTEND_URL')
+        if env_url and env_url.startswith('http'):
+            return env_url.rstrip('/')
+        # Render default domain check
+        render_url = os.getenv('RENDER_EXTERNAL_URL')
+        if render_url:
+            return render_url.rstrip('/')
+        
         pub_file = os.path.join(BASE_DIR, 'public_url.txt')
         if os.path.exists(pub_file):
             with open(pub_file, 'r') as f:
                 url = f.read().strip()
                 if url.startswith('http'):
                     return url
-        load_dotenv(override=True)
-        return os.getenv('FRONTEND_URL', 'http://localhost:3000')
+        return 'https://secure-rotation-voting.onrender.com'
 
