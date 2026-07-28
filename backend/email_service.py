@@ -25,17 +25,18 @@ def send_batch_invitation_emails(recipients, custom_subject=None, custom_message
     def getaddrinfo_ipv4(host, port, family=0, type=0, proto=0, flags=0):
         return orig_getaddrinfo(host, port, socket.AF_INET, type, proto, flags)
 
+    # Try SMTP_SSL on Port 465 first (fast & unblocked on cloud hosts), fallback to Port 587 TLS
     server = None
     socket.getaddrinfo = getaddrinfo_ipv4
     try:
         try:
-            server = smtplib.SMTP(Config.MAIL_SERVER, Config.MAIL_PORT, timeout=15)
-            server.starttls()
+            context = ssl.create_default_context()
+            server = smtplib.SMTP_SSL(Config.MAIL_SERVER, 465, context=context, timeout=10)
             server.login(Config.MAIL_USERNAME, Config.MAIL_PASSWORD)
         except Exception as e1:
-            print(f"[SMTP TLS FAIL] Trying SSL 465: {e1}")
-            context = ssl.create_default_context()
-            server = smtplib.SMTP_SSL(Config.MAIL_SERVER, 465, context=context, timeout=15)
+            print(f"[SMTP SSL 465 FAIL] Trying TLS 587: {e1}")
+            server = smtplib.SMTP(Config.MAIL_SERVER, 587, timeout=10)
+            server.starttls()
             server.login(Config.MAIL_USERNAME, Config.MAIL_PASSWORD)
     except Exception as e2:
         print(f"[SMTP ALL FAIL] {e2}")
