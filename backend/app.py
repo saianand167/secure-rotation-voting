@@ -12,7 +12,7 @@ from flask import send_from_directory
 
 def create_app():
     dist_folder = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'frontend', 'dist'))
-    app = Flask(__name__, static_folder=dist_folder, static_url_path='')
+    app = Flask(__name__, static_folder=None)
     app.config.from_object(Config)
 
     # Enable CORS for all routes (for React frontend)
