@@ -3,7 +3,7 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from models import db, Admin, User, Vote, PollSettings, AuditLog
 from auth import hash_password, verify_password, generate_admin_token
 from email_service import send_invitation_email
-import pandas as pd
+import csv
 import io
 from datetime import datetime
 
