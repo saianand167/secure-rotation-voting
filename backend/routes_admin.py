@@ -2,7 +2,7 @@ from flask import Blueprint, request, jsonify, send_file
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from models import db, Admin, User, Vote, PollSettings, AuditLog
 from auth import hash_password, verify_password, generate_admin_token
-from email_service import send_invitation_email
+from email_service import send_invitation_email, send_batch_invitation_emails
 import csv
 import io
 from datetime import datetime
@@ -219,22 +219,19 @@ def send_invitations():
     if not users:
         return jsonify({'message': 'No users to send invitations to.'}), 200
 
-    sent_count = 0
-    failed_count = 0
+    recipients = [{'email': u.email, 'name': u.name, 'token': u.token, 'user_obj': u} for u in users]
+    sent_count, failed_count, status_msg = send_batch_invitation_emails(recipients, custom_subject=subject, custom_message=custom_msg)
 
-    for user in users:
-        success, msg = send_invitation_email(user.email, user.name, user.token, custom_subject=subject, custom_message=custom_msg)
-        if success:
-            user.invitation_sent = True
-            sent_count += 1
-        else:
-            failed_count += 1
+    # Mark users as invitation_sent
+    if sent_count > 0:
+        for u in users:
+            u.invitation_sent = True
+        db.session.commit()
 
-    db.session.commit()
     log_admin_action(current_admin, "Sent Invitations", f"Sent {sent_count} invitations to {'ALL' if send_all else 'pending'}, {failed_count} failed")
 
     return jsonify({
-        'message': f'Sent {sent_count} email invitations successfully ({failed_count} failed).',
+        'message': f'Sent {sent_count} email invitations successfully ({failed_count} failed). Status: {status_msg}',
         'sent_count': sent_count,
         'failed_count': failed_count
     }), 200
