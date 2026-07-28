@@ -19,21 +19,29 @@ def send_batch_invitation_emails(recipients, custom_subject=None, custom_message
         print(f"[LOCAL TEST MODE BATCH] Logging {len(recipients)} emails.")
         return len(recipients), 0, "Email logged to console (No SMTP credentials)."
 
-    # Try SMTP connection (Port 587 TLS first, Port 465 SSL fallback)
+    # Force IPv4 socket resolution to fix [Errno 101] Network is unreachable on Render/cloud containers
+    import socket
+    orig_getaddrinfo = socket.getaddrinfo
+    def getaddrinfo_ipv4(host, port, family=0, type=0, proto=0, flags=0):
+        return orig_getaddrinfo(host, port, socket.AF_INET, type, proto, flags)
+
     server = None
+    socket.getaddrinfo = getaddrinfo_ipv4
     try:
-        server = smtplib.SMTP(Config.MAIL_SERVER, Config.MAIL_PORT, timeout=15)
-        server.starttls()
-        server.login(Config.MAIL_USERNAME, Config.MAIL_PASSWORD)
-    except Exception as e1:
-        print(f"[SMTP TLS FAIL] Trying SSL 465: {e1}")
         try:
+            server = smtplib.SMTP(Config.MAIL_SERVER, Config.MAIL_PORT, timeout=15)
+            server.starttls()
+            server.login(Config.MAIL_USERNAME, Config.MAIL_PASSWORD)
+        except Exception as e1:
+            print(f"[SMTP TLS FAIL] Trying SSL 465: {e1}")
             context = ssl.create_default_context()
             server = smtplib.SMTP_SSL(Config.MAIL_SERVER, 465, context=context, timeout=15)
             server.login(Config.MAIL_USERNAME, Config.MAIL_PASSWORD)
-        except Exception as e2:
-            print(f"[SMTP SSL FAIL] {e2}")
-            return 0, len(recipients), f"SMTP Login Failed: {str(e2)}"
+    except Exception as e2:
+        print(f"[SMTP ALL FAIL] {e2}")
+        return 0, len(recipients), f"SMTP Login Failed: {str(e2)}"
+    finally:
+        socket.getaddrinfo = orig_getaddrinfo
 
     sent_count = 0
     failed_count = 0
