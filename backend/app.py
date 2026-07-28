@@ -71,16 +71,62 @@ def create_app():
             print("[INIT] Default admin created: username='admin', password='admin123'")
 
         # Seed default PollSettings if missing
-        if not PollSettings.query.first():
-            default_poll = PollSettings(
+        default_subj = '😄 Bench దొర్లే ప్రక్రియకు స్వాగతం🎉 ...#దొర్లే_దొర్లుతారు 😜....... #😎 We are not దొరలు... ❌👑'
+        default_body = '''ప్రియమైన CSE-5 విద్యార్థులారా 📢😂
+
+ఈ poll సరదాగా పెట్టింది కాదు... 😌
+సత్ప్రవర్తనతో ఉన్న మన క్లాస్ boys ని కాపాడుకోవడానికి పెట్టింది... 🥹🛡️
+
+Boys కి అంటూ సొంత back bench లేదు తెలుసా... 😭🪑💔
+
+చివరిగా నేను చెప్పాలనుకున్నది ఏమిటంటే... 🥺👇
+
+Boys ki back bench అంటే back bone లాంటిది 🦴😂
+ఆ bone పై కొట్టకండి అమ్మా... 🙏🏻🥹
+Back bench ని లాక్కోకండి... మా భావోద్వేగాలతో ఆడుకోకండి! 😭🤣💔
+
+#SaveBackBench 😎🪑
+#JusticeForBoys 🤧⚖️
+#BackBenchIsEmotion ❤️😂
+
+                                                                                                                                                                                                                                                                                        by cse5 boys cr and boys ❤️'''
+
+        poll = PollSettings.query.first()
+        if not poll:
+            poll = PollSettings(
                 title="Rotation Schedule Preference Poll",
                 description="Please choose your preference for the boys & girls rotation schedule.",
                 is_closed=False,
-                email_subject="Rotation Schedule Preference Voting Invitation",
-                custom_message="Hello! You are invited to participate in the rotation schedule preference voting poll."
+                email_subject=default_subj,
+                custom_message=default_body
             )
-            db.session.add(default_poll)
-            print("[INIT] Default poll settings initialized.")
+            db.session.add(poll)
+            print("[INIT] Default poll settings initialized with custom Telugu template.")
+        else:
+            poll.email_subject = default_subj
+            poll.custom_message = default_body
+
+        # Auto-seed 60 voters from cse5.csv if user table is empty
+        from models import User
+        if User.query.count() == 0:
+            csv_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'frontend', 'src', 'pages', 'cse5.csv'))
+            if os.path.exists(csv_path):
+                import csv
+                with open(csv_path, 'r', encoding='utf-8-sig') as f:
+                    reader = csv.DictReader(f)
+                    added_count = 0
+                    for row in reader:
+                        e = row.get('email', '').strip().lower()
+                        n = row.get('name', '').strip()
+                        if e and '@' in e:
+                            db.session.add(User(email=e, name=n))
+                            added_count += 1
+                    print(f"[INIT] Auto-seeded {added_count} voters from cse5.csv into PostgreSQL.")
+            
+            # Ensure test emails are included
+            for test_email in ['n220906@rguktn.ac.in', 'panduruanand3@gmail.com']:
+                if not User.query.filter_by(email=test_email).first():
+                    db.session.add(User(email=test_email, name='Voter'))
 
         db.session.commit()
 
