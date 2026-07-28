@@ -9,11 +9,12 @@ class Config:
     SECRET_KEY = os.getenv('SECRET_KEY', 'secure_rotation_voting_secret_key_2026')
     JWT_SECRET_KEY = os.getenv('JWT_SECRET_KEY', 'jwt_secret_rotation_voting_2026')
     
-    # SQLite default, or MySQL if set in env (e.g. mysql+pymysql://user:pass@localhost:3306/dbname)
-    SQLALCHEMY_DATABASE_URI = os.getenv(
-        'DATABASE_URL', 
-        f'sqlite:///{os.path.join(BASE_DIR, "rotation_voting.db")}'
-    )
+    # SQLite default, or MySQL/PostgreSQL if set in env
+    _db_url = os.getenv('DATABASE_URL', f'sqlite:///{os.path.join(BASE_DIR, "rotation_voting.db")}')
+    if _db_url.startswith("postgres://"):
+        _db_url = _db_url.replace("postgres://", "postgresql://", 1)
+    
+    SQLALCHEMY_DATABASE_URI = _db_url
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     # Gmail SMTP Settings
