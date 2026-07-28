@@ -103,38 +103,50 @@ def upload_whitelist_csv():
         return jsonify({'error': 'No file uploaded.'}), 400
 
     file = request.files['file']
-    if not file.filename.endswith('.csv') and not file.filename.endswith('.xlsx'):
+    filename = file.filename.lower()
+    if not filename.endswith('.csv') and not filename.endswith('.xlsx'):
         return jsonify({'error': 'Please upload a valid CSV or Excel file.'}), 400
 
     try:
-        if file.filename.endswith('.csv'):
-            df = pd.read_csv(file)
+        rows = []
+        if filename.endswith('.csv'):
+            content = file.stream.read().decode('utf-8-sig', errors='replace')
+            reader = csv.reader(io.StringIO(content))
+            rows = [row for row in reader if any(field.strip() for field in row)]
         else:
-            df = pd.read_excel(file)
+            import openpyxl
+            wb = openpyxl.load_workbook(file)
+            sheet = wb.active
+            for row in sheet.iter_rows(values_only=True):
+                if any(row):
+                    rows.append([str(cell or '').strip() for cell in row])
 
-        # Look for email column
-        email_col = None
-        for col in df.columns:
-            if 'email' in str(col).lower():
-                email_col = col
-                break
-        
-        if not email_col:
-            # Default to first column if no explicit header
-            email_col = df.columns[0]
+        if not rows:
+            return jsonify({'error': 'The uploaded file is empty.'}), 400
 
-        name_col = None
-        for col in df.columns:
-            if 'name' in str(col).lower():
-                name_col = col
-                break
+        headers = [str(h).strip().lower() for h in rows[0]]
+        email_idx = -1
+        name_idx = -1
+
+        for idx, h in enumerate(headers):
+            if 'email' in h:
+                email_idx = idx
+            elif 'name' in h:
+                name_idx = idx
+
+        if email_idx == -1:
+            email_idx = 0
+        if name_idx == -1 and len(headers) > 1:
+            name_idx = 1 if email_idx != 1 else 0
 
         added_count = 0
         skipped_count = 0
 
-        for _, row in df.iterrows():
-            email = str(row[email_col]).strip().lower()
-            name = str(row[name_col]).strip() if name_col and pd.notna(row[name_col]) else ''
+        for row in rows[1:]:
+            if not row or len(row) <= email_idx:
+                continue
+            email = str(row[email_idx]).strip().lower()
+            name = str(row[name_idx]).strip() if name_idx != -1 and len(row) > name_idx else ''
 
             if email and '@' in email and not User.query.filter_by(email=email).first():
                 u = User(email=email, name=name)
