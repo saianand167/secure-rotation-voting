@@ -1,4 +1,5 @@
 import smtplib
+import ssl
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from config import Config
@@ -27,7 +28,6 @@ def send_batch_invitation_emails(recipients, custom_subject=None, custom_message
     except Exception as e1:
         print(f"[SMTP TLS FAIL] Trying SSL 465: {e1}")
         try:
-            import smtplib, ssl
             context = ssl.create_default_context()
             server = smtplib.SMTP_SSL(Config.MAIL_SERVER, 465, context=context, timeout=15)
             server.login(Config.MAIL_USERNAME, Config.MAIL_PASSWORD)
